@@ -1,8 +1,9 @@
 package com.example.qa_service.controller;
 
 import com.example.interview.dto.*;
-import com.example.interview.model.Interview;
 import com.example.interview.service.InterviewService;
+import com.example.qa_service.service.AIEvaluationService;
+import com.example.qa_service.model.Answer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,12 +15,15 @@ import java.util.Map;
 public class InterviewController {
 
     private final InterviewService interviewService;
+    private final AIEvaluationService aiService;
 
-    public InterviewController(InterviewService interviewService) {
+    public InterviewController(InterviewService interviewService,
+                               AIEvaluationService aiService) {
         this.interviewService = interviewService;
+        this.aiService = aiService;
     }
 
-    // Start an interview: body { "topic":"Java", "difficulty":"Intermediate", "n":"3" }
+    // Start interview
     @PostMapping
     public ResponseEntity<InterviewDTO> startInterview(@RequestBody Map<String, String> body) {
         String topic = body.get("topic");
@@ -29,23 +33,23 @@ public class InterviewController {
         return ResponseEntity.ok(dto);
     }
 
-    // Submit answers: list of AnswerDTO
+    // Submit answers + AI evaluation
     @PostMapping("/{id}/answers")
     public ResponseEntity<?> submitAnswers(@PathVariable("id") Long id,
                                            @RequestBody List<AnswerDTO> answers) {
-        Interview interview = interviewService.submitAnswers(id, answers);
 
-        var result = Map.of(
-            "interviewId", interview.getId(),
-            "score", interview.getScore(),
-            "answers", interview.getAnswers().stream().map(a ->
-                Map.of(
-                    "questionId", a.getQuestionId(),
-                    "score", a.getScore(),
-                    "feedback", a.getFeedback()
-                )
-            ).toList()
-        );
+        // Evaluate each answer using AI service
+        List<Answer> evaluatedAnswers = answers.stream()
+                .map(a -> aiService.evaluateAndSave(
+                        a.getQuestionId(),
+                        a.getQuestionText(),
+                        a.getSampleAnswer(),
+                        a.getCandidateResponse()
+                ))
+                .toList();
+
+        // Optional: pass evaluated answers to interviewService
+        Map<String, Object> result = interviewService.finishInterview(id, evaluatedAnswers);
 
         return ResponseEntity.ok(result);
     }

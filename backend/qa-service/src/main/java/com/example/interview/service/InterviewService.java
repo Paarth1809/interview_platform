@@ -36,15 +36,15 @@ public class InterviewService {
         interview.setStartedAt(Instant.now());
         interviewRepo.save(interview);
 
-    List<QuestionDTO> questionDTOs = selected.stream()
-        .map(q -> new QuestionDTO(q.getId(), q.getQuestionText()))
-        .toList();
+        List<QuestionDTO> questionDTOs = selected.stream()
+            .map(q -> new QuestionDTO(q.getId(), q.getQuestionText()))
+            .toList();
 
         return new InterviewDTO(interview.getId(), questionDTOs);
     }
 
     // submit answers + compute scores
-    public Interview submitAnswers(Long interviewId, List<AnswerDTO> answers) {
+    public Map<String, Object> submitAnswers(Long interviewId, List<AnswerDTO> answers) {
         Interview interview = interviewRepo.findById(interviewId)
                 .orElseThrow(() -> new RuntimeException("Interview not found"));
 
@@ -70,8 +70,31 @@ public class InterviewService {
         }
 
         interview.setFinishedAt(Instant.now());
-        interview.setScore(count == 0 ? 0 : total / count);
+        double finalScore = count == 0 ? 0 : total / count;
+        interview.setScore(finalScore);
+        interviewRepo.save(interview);
 
-        return interviewRepo.save(interview);
+        // ✅ Create full report response
+        Map<String, Object> result = new HashMap<>();
+        result.put("interviewId", interviewId);
+        result.put("finalScore", finalScore);
+
+        List<Map<String, Object>> detailed = new ArrayList<>();
+        for (AnswerDTO dto : answers) {
+            Map<String, Object> detail = new HashMap<>();
+            detail.put("questionId", dto.questionId());
+            detail.put("responseText", dto.responseText());
+
+            String feedback = evaluator.feedbackFor(
+                    questionRepo.findById(dto.questionId()).get().getSampleAnswer(),
+                    dto.responseText()
+            );
+
+            detail.put("feedback", feedback);
+            detailed.add(detail);
+        }
+
+        result.put("details", detailed);
+        return result;
     }
 }
