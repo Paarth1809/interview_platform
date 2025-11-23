@@ -1,124 +1,55 @@
-AI-Powered Interview Preparation Platform
+# AI-Powered Interview Preparation Platform
 
-A full-stack platform that simulates technical interviews using AI-based evaluation, question banks, scoring, and detailed feedback.
-Built using Spring Boot, FastAPI, React, and supports Dockerized deployment.
+A full-stack platform that simulates technical interviews using AI-based evaluation, question banks, scoring, and detailed feedback.  
+Includes a Spring Boot backend, a FastAPI AI microservice, and a React frontend. Docker Compose is provided for local development.
 
-🚀 Features
+---
 
-Topic & difficulty-based interview creation
+## Features
 
-AI-generated scoring
+- Topic & difficulty based interview generation  
+- Submit text answers and receive AI evaluation  
+- Scoring: semantic similarity, keyword coverage, overall score  
+- Sentiment analysis and written feedback per answer  
+- JWT authentication and user flows  
+- Modular microservice architecture (backend + AI service + frontend)  
+- Dockerized for local development
 
-Semantic similarity
+---
 
-Keyword coverage
+## Project structure
 
-Sentiment analysis
-
-Detailed answer feedback
-
-JWT authentication
-
-React modern UI
-
-Microservice architecture
-
-Optional Docker deployment
-
-📂 Project Structure
-project/
-│── backend/
-│   ├── qa-service/          # Spring Boot backend
-│   └── ai-eval-service/     # Python AI microservice
-│
-│── frontend/                # React frontend (Vite)
-│
-│── docker-compose.yml
-│── README.md
-
-🧠 Tech Stack
-Backend (Java)
-
-Spring Boot 3
-
-Spring Security (JWT)
-
-Spring Data JPA
-
-PostgreSQL / H2
-
-AI Microservice
-
-FastAPI
-
-Python
-
-NLP models / OpenAI API
-
-Frontend
-
-React
-
-Vite
-
-Axios
-
-DevOps
-
-Docker
-
-Docker Compose
-
-GitHub Actions
-
-🛠 Setup
-Clone repo
-git clone https://github.com/Paarth1809/interview_platform.git
-cd interview_platform
-
-QA Service (Spring Boot)
-cd backend/qa-service
-./mvnw spring-boot:run
-
-AI Service (FastAPI)
-cd backend/ai-eval-service
-pip install -r requirements.txt
-uvicorn app:app --reload --port 8001
-
-Frontend
-cd frontend
-npm install
-npm run dev
-
-🐳 Run with Docker
-docker compose up --build
+interview_platform/
+├── backend/
+│ ├── qa-service/ # Spring Boot backend
+│ └── ai-eval-service/ # FastAPI AI microservice
+├── frontend/ # React (Vite) frontend
+├── infra/ # infra / k8s (optional)
+├── docker-compose.yml
+└── README.md
 
 
-Starts:
+---
 
-qa-service (Spring Boot)
+## Tech stack
 
-ai-eval-service (FastAPI)
+**Backend**
+- Java 17, Spring Boot 3  
+- Spring Security (JWT)  
+- Spring Data JPA (H2 for dev / Postgres for prod)
 
-frontend (React UI)
+**AI microservice**
+- Python 3.11, FastAPI  
+- Sentence-Transformers / OpenAI (configurable)  
+- Uvicorn
 
-📌 APIs
-Interview
+**Frontend**
+- React + Vite  
+- Axios
 
-POST /api/interviews – start
+**DevOps**
+- Docker, Docker Compose  
+- (Optional) Kubernetes manifests under `infra/k8s`  
+- CI/CD via GitHub Actions (recommended)
 
-POST /api/interviews/{id}/answers – submit answers
-
-AI Engine
-
-POST /evaluate
-
-Auth
-
-POST /auth/register
-
-POST /auth/login
-
-⭐ Support
-
-Star ⭐ the repo if you like it.
+---
