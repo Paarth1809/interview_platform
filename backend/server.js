@@ -29,58 +29,50 @@ app.use("/auth", authRoutes);
 // Test
 app.get("/", (req, res) => res.send("Backend running..."));
 
-// AUDIO + STT + EVAL
+// AUDIO + STT + EVAL (Gemini via Python Service)
 app.post("/api/submit-audio", upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No audio file uploaded" });
 
-    const audioBuffer = req.file.buffer;
+    // Forward to Python Service (Gemini)
+    // Python service is expected to be running at http://localhost:8001
+    const pythonServiceUrl = "http://localhost:8001/evaluate-audio";
 
     const form = new FormData();
-    form.append("file", audioBuffer, {
+    form.append("file", req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
     });
-    form.append("model", "gpt-4o-transcribe");
 
-    const sttResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    // Pass sample answer if available (could be added to request body)
+    // For now we send a generic or empty one, or extract from req.body if frontend sends it
+    const sampleAnswer = req.body.sampleAnswer || "";
+    form.append("sampleAnswer", sampleAnswer);
+
+    const pyResp = await fetch(pythonServiceUrl, {
       method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: form,
     });
 
-    const sttJson = await sttResp.json();
-    const transcript = sttJson.text || "";
+    if (!pyResp.ok) {
+      const errText = await pyResp.text();
+      throw new Error(`Python Service Error: ${errText}`);
+    }
 
-    const prompt = `
-Evaluate the candidate:
-Transcript: ${transcript}
+    const aiResult = await pyResp.json();
 
-Return JSON:
-{ 
- "clarity": number,
- "correctness": number,
- "completeness": number,
- "overall": number,
- "feedback": "string"
-}
-`;
+    // Map Python result to expected frontend format
+    const transcript = aiResult.transcript || "";
+    const feedback = aiResult.feedback || "No feedback generated.";
+    const score = (aiResult.score || 0) * 100; // Convert 0-1 to 0-100
 
-    const evalResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-      }),
-    });
-
-    const evalJson = await evalResp.json();
-    const evaluation = JSON.parse(evalJson?.choices?.[0]?.message?.content ?? "{}");
+    const evaluation = {
+      overall: score,
+      feedback: feedback,
+      clarity: 0, // Placeholder
+      correctness: score,
+      completeness: 0 // Placeholder
+    };
 
     let savedId = null;
     try {
@@ -93,7 +85,6 @@ Return JSON:
       }
     } catch (dbErr) {
       console.error("DB Save Error:", dbErr);
-      // Don't fail the request if DB fails
       savedId = "error-saving-" + Date.now();
     }
 
